@@ -1,3 +1,4 @@
+# v1.00
 
 #import re
 #def eval_template(src, context):
@@ -50,15 +51,15 @@ def recurse(tree, context, ans):
         if word_in != "in":
             raise SyntaxError(f"Invalid {cmd} tag in: {''.join(tree['args'])}")
         sequence = eval( " ".join(args) , context )
-        for_parent = {n: context.get(n, None) for n in ("for_parent","for_counter",var)}
-        context['for_parent'] = for_parent
+        outer = { k: context.get(k, None) for k in ("outer","index") }
+        context['outer'] = type('', (), outer)()
         for i,value in enumerate(sequence):
             context[var] = value
-            context['for_counter'] = i
+            context['index'] = i
             ans.append( fill(tree['text'] , context) )
             for c in tree['children']:
                 recurse(c, context, ans)
-        context.update(for_parent)
+        context.update(outer)
     else:
         ans.append( fill(tree['text'] , context) )
         for c in tree['children']:

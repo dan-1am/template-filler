@@ -49,22 +49,15 @@ class TestFiller(unittest.TestCase):
         text = filler.use(src, context)
         self.assertEqual(text, "0. 5; 0. 4; 0. 3; 1. 5; 1. 4; 1. 3; ")
 
-context = dict(a="alpha", b="book", d=[5,4,3])
-src = """\
-line1 {{a}}
-1 {% if a == "alpha" %} 2
-{% for i in d %}
-<h1>head{{i}}</h1>
-body{% if i == 4 %} four! {% endif %}
-{% for j in range(2) %}{{for_parent['for_counter']}}:{{j}}{% endfor %}
-{% endfor %}
-{% endif %}
-done {{b}}
-"""
-
-tree = filler.parse(src, "{%", "%}")
-print(tree)
-print( filler.execute(tree, context) )
+    def test_outer_for_index(self):
+        src = ("{% for m in ('ab','cd') %}"
+        "{% for i in d %}{% for n in range(2) %}"
+        "{{outer.outer.index}}{{outer.index}}{{index}}={{m}}{{i}}{{n}} "
+        "{% endfor %}{% endfor %}{% endfor %}")
+        need = "000=ab50 001=ab51 010=ab40 011=ab41 020=ab30 021=ab31"\
+        " 100=cd50 101=cd51 110=cd40 111=cd41 120=cd30 121=cd31 "
+        text = filler.use(src, context)
+        self.assertEqual(text, need)
 
 
 if __name__ == '__main__':
