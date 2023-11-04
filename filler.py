@@ -1,4 +1,4 @@
-# v1.00
+# v1.01
 
 #import re
 #def eval_template(src, context):
@@ -28,7 +28,7 @@ def parse(src, open="{%", close="%}"):
                 raise SyntaxError(f"Template tag {last['cmd']} closed with {cmd}")
             last['after'] = text
             queued[-1]['children'].append(last)
-        elif cmd in ["if","for"]:
+        elif cmd in ("if","for"):
             queued.append( dict(cmd=cmd, args=args, text=text, children=[]) )
         else:
             raise SyntaxError(f"Unknown template tag {cmd}")
