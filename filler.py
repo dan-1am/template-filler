@@ -1,4 +1,4 @@
-# v1.01
+# v1.02
 
 #import re
 #def eval_template(src, context):
@@ -37,18 +37,30 @@ def parse(src, open="{%", close="%}"):
     return queued[0]
 
 
+commands = {}
+
+
+def command(f):
+    tag = f.__name__.removeprefix("cmd_")
+    commands[tag] = f
+    return f
+
+
+@command
 def cmd_pass(tree, context, ans):
     ans.append( fill(tree['text'] , context) )
     for c in tree['children']:
         recurse(c, context, ans)
 
 
+@command
 def cmd_if(tree, context, ans):
     test = eval( " ".join(tree['args']) , context )
     if test:
         cmd_pass(tree, context, ans)
 
 
+@command
 def cmd_for(tree, context, ans):
     var, word_in, *args = tree['args']
     if word_in != "in":
@@ -65,12 +77,7 @@ def cmd_for(tree, context, ans):
 
 def recurse(tree, context, ans):
     cmd = tree['cmd']
-    if cmd == "if":
-        cmd_if(tree, context, ans)
-    elif cmd == "for":
-        cmd_for(tree, context, ans)
-    else:
-        cmd_pass(tree, context, ans)
+    commands[cmd](tree, context, ans)
     ans.append( fill(tree.get('after',""), context) )
 
 
