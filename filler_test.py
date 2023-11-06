@@ -29,6 +29,14 @@ class TestFiller(unittest.TestCase):
         text = filler.use(src, context)
         self.assertEqual(text, "a  b")
 
+    def test_if_else(self):
+        src = """a {% if a == "alpha" %}ok{% else %}bad{% endif %} b"""
+        text = filler.use(src, context)
+        self.assertEqual(text, "a ok b")
+        src = """a {% if a == "wrong" %}ok{% else %}bad{% endif %} b"""
+        text = filler.use(src, context)
+        self.assertEqual(text, "a bad b")
+
     def test_spaces_near_tags(self):
         src = """a  {% if a == "alpha" %}\n ok  \n{% endif %} b"""
         text = filler.use(src, context)

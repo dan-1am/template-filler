@@ -1,6 +1,8 @@
 """ Template filling with context
 
-Simplest usage:
+Standard usage:
+
+import filler
 
 text = filler.use(template, context)
 
@@ -12,8 +14,13 @@ for context in contexts:
     result.append( filler.execute(tree, context)
 
 
+Simplest usage (variable/expression substitution):
+
+text = filler.fill(template, context)
+
+
 If you need variable/expression substitution only,
-without control commands, you can use regexp:
+without control commands, you don't need this module:
 
 import re
 
@@ -21,9 +28,22 @@ def eval_template(template, context):
     return re.sub(r'\{\{(.*?)\}\}',
         lambda m: str( eval(m[1], context) ), template)
 
+
+Template example:
+
+<html><head><title>{{title}}</title></head>
+<body><h1>{{title}}</h1>
+{% for planet in planets %}
+  <p>{{index+1}}. {{planet}}</p>
+  {% if not planets[planet] %}<p>no satellites</p>{% endif %}
+  {% for satellite in planets[planet]%}
+    <p>{{outer.index+1}}.{{index+1}}. {{satellite}}</p>
+  {% endfor %}
+{% endfor %}
+</body></html>
 """
 
-__version__ = "1.03"
+__version__ = "1.04"
 __all__ = ["fill", "parse", "execute", "use"]
 
 
@@ -63,6 +83,15 @@ def cmd_if(tree, context, ans):
     test = eval( " ".join(tree['args']) , context )
     if test:
         cmd_pass(tree, context, ans)
+    else:
+        cmd = tree.get('else', None)
+        if cmd:
+            cmd_pass(cmd, context, ans)
+
+
+@command
+def cmd_else(tree, context, ans):
+    pass
 
 
 @command
@@ -89,12 +118,21 @@ def parse(template, open="{%", close="%}"):
         cmd,*args = line.split()
         if cmd.startswith("end"):
             last = queued.pop()
+            if last['cmd'] == 'else':
+                elsetag, last = last, queued.pop()
+                last['children'].append(elsetag)
+            last['after'] = text
             if last['cmd'] != cmd[3:]:
                 raise SyntaxError(f"Template tag {last['cmd']} closed with {cmd}")
-            last['after'] = text
             queued[-1]['children'].append(last)
         elif cmd in (commands):
-            queued.append( dict(cmd=cmd, args=args, text=text, children=[]) )
+            parsed = dict(cmd=cmd, args=args, text=text, children=[])
+            if cmd == "else":
+                iftag = queued[-1]
+                if iftag['cmd'] != "if":
+                    raise SyntaxError(f"Tag {cmd} without if in: {line}")
+                iftag['else'] = parsed
+            queued.append(parsed)
         else:
             raise SyntaxError(f"Unknown template tag {cmd}")
     if len(queued) > 1:
