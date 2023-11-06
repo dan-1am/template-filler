@@ -22,17 +22,17 @@ class TestFiller(unittest.TestCase):
         self.assertEqual(text, "alpha-fx 4 9.5 end")
 
     def test_single_if(self):
-        src = """{% if a == "alpha" %}ok{% endif %}"""
+        src = """a {% if a == "alpha" %}ok{% endif %} b"""
         text = filler.use(src, context)
-        self.assertEqual(text, "ok")
-        src = """{% if b == "bad" %}bad{% endif %}"""
+        self.assertEqual(text, "a ok b")
+        src = """a {% if b == "bad" %}bad{% endif %} b"""
         text = filler.use(src, context)
-        self.assertEqual(text, "")
+        self.assertEqual(text, "a  b")
 
     def test_spaces_near_tags(self):
-        src = """begin  {% if a == "alpha" %}\n ok  \n{% endif %} end"""
+        src = """a  {% if a == "alpha" %}\n ok  \n{% endif %} b"""
         text = filler.use(src, context)
-        self.assertEqual(text, """begin  \n ok  \n end""")
+        self.assertEqual(text, """a  \n ok  \n b""")
 
     def test_single_for(self):
         src = """{% for i in range(3) %}{{i}}+{% endfor %}"""
