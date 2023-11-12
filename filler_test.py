@@ -37,6 +37,24 @@ class TestFiller(unittest.TestCase):
         text = filler.use(src, context)
         self.assertEqual(text, "a bad b")
 
+    def test_single_elif(self):
+        context = dict(a=1)
+        src = """a {% if a == 1 %}1{% elif a == 2 %}2{% endif %} b"""
+        text = filler.use(src, context)
+        self.assertEqual(text, "a 1 b")
+        context['a'] = 2
+        text = filler.use(src, context)
+        self.assertEqual(text, "a 2 b")
+
+    def test_elif_chain(self):
+        context = dict(a=1)
+        src = ("""a {% if a == 1 %}1{% elif a == 2 %}2"""
+            """{% elif a == 3 %}3{% else %}4{% endif %} b""")
+        for n in range(1,5):
+            context['a'] = n
+            text = filler.use(src, context)
+            self.assertEqual(text, f"a {n} b")
+
     def test_spaces_near_tags(self):
         src = """a  {% if a == "alpha" %}\n ok  \n{% endif %} b"""
         text = filler.use(src, context)

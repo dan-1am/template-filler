@@ -43,7 +43,7 @@ Template example:
 </body></html>
 """
 
-__version__ = "1.04"
+__version__ = "1.05"
 __all__ = ["fill", "parse", "execute", "use"]
 
 
@@ -84,21 +84,20 @@ def cmd_if(tree, context, ans):
     if test:
         cmd_pass(tree, context, ans)
     else:
-        cmd = tree.get('else', None)
-        if cmd:
-            cmd_pass(cmd, context, ans)
+        branch = tree.get('else', None)
+        if branch:
+            recurse(branch, context, ans)
 
 
-@command
-def cmd_else(tree, context, ans):
-    pass
+commands['elif'] = cmd_if
+commands['else'] = cmd_pass
 
 
 @command
 def cmd_for(tree, context, ans):
     var, word_in, *args = tree['args']
     if word_in != "in":
-        raise SyntaxError(f"Invalid {cmd} tag in: {''.join(tree['args'])}")
+        raise SyntaxError(f"Invalid {tree.cmd} tag in: {''.join(tree['args'])}")
     sequence = eval( " ".join(args) , context )
     outer = { k: context.get(k, None) for k in ("outer","index") }
     context['outer'] = type('', (), outer)()
@@ -118,33 +117,33 @@ def parse(template, open="{%", close="%}"):
         cmd,*args = line.split()
         if cmd.startswith("end"):
             last = queued.pop()
-            if last['cmd'] == 'else':
-                elsetag, last = last, queued.pop()
-                last['children'].append(elsetag)
-            last['after'] = text
-            if last['cmd'] != cmd[3:]:
-                raise SyntaxError(f"Template tag {last['cmd']} closed with {cmd}")
-            queued[-1]['children'].append(last)
+            if last["cmd"] in ("elif","else"):
+                last = queued.pop()
+            last["after"] = text
+            if last["cmd"] != cmd[3:]:
+                raise SyntaxError(f'Template tag {last["cmd"]} closed with {cmd}')
+            queued[-1]["children"].append(last)
         elif cmd in (commands):
             parsed = dict(cmd=cmd, args=args, text=text, children=[])
-            if cmd == "else":
-                iftag = queued[-1]
-                if iftag['cmd'] != "if":
+            if cmd in ("elif","else"):
+                queued[-1]["else"] = parsed
+                if queued[-1]["cmd"] == "elif":  # drop previous elif tags
+                    queued.pop()
+                if queued[-1]["cmd"] != "if":
                     raise SyntaxError(f"Tag {cmd} without if in: {line}")
-                iftag['else'] = parsed
             queued.append(parsed)
         else:
             raise SyntaxError(f"Unknown template tag {cmd}")
     if len(queued) > 1:
-        raise SyntaxError(f"Tag {queued[-1]['cmd']} is not closed")
+        raise SyntaxError(f'Tag {queued[-1]["cmd"]} is not closed')
     return queued[0]
 
 
 def recurse(tree, context, ans):
     """Traverse template tree and collect executed pieces"""
-    cmd = tree['cmd']
+    cmd = tree["cmd"]
     commands[cmd](tree, context, ans)
-    ans.append( fill(tree.get('after',""), context) )
+    ans.append( fill(tree.get("after",""), context) )
 
 
 def execute(tree, context):
