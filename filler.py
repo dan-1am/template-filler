@@ -37,7 +37,7 @@ Template example:
 </body></html>
 """
 
-__version__ = "1.06"
+__version__ = "1.07"
 __all__ = ["fill", "parse", "execute", "use"]
 
 
@@ -59,7 +59,11 @@ commands = {}
 
 def command(f):
     """Decorator. Add tag command to registry."""
-    tag = f.__name__.removeprefix("cmd_")
+# need python 3.9+
+#    tag = f.__name__.removeprefix("cmd_")
+    tag = f.__name__
+    if tag.startswith("cmd_"):
+        tag = tag[4:]
     commands[tag] = f
     return f
 

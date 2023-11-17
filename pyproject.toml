@@ -9,7 +9,7 @@ authors = [
 ]
 description = "Template engine - create text-based file from template."
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.6"
 keywords = ["template", "text", "html", "markup", "web"]
 license = {text = "BSD-Zero-Clause"}
 classifiers = [
