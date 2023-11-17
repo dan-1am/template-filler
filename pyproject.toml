@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "template-filler"
+authors = [
+    {name = "Denis Orekhov", email = "oda16m@gmail.com"},
+]
+description = "Template engine - create text-based file from template."
+readme = "README.md"
+requires-python = ">=3.9"
+keywords = ["template", "text", "html", "markup", "web"]
+license = {text = "BSD-Zero-Clause"}
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Web Environment",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: BSD License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Topic :: Internet :: WWW/HTTP :: Dynamic Content",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Text Processing :: Markup",
+    "Topic :: Text Processing :: Markup :: HTML",
+]
+dependencies = []
+dynamic = ["version"]
+
+[tool.setuptools]
+py-modules = ["filler"]
+
+[tool.setuptools.dynamic]
+version = {attr = "filler.__version__"}

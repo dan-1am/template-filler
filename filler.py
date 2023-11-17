@@ -1,11 +1,9 @@
-""" Template filling with context
+""" Create text-based file from template.
 
 Standard usage:
 
 import filler
-
 text = filler.use(template, context)
-
 
 Preparse template for repeated use:
 
@@ -13,21 +11,17 @@ tree = filler.parse(template)
 for context in contexts:
     result.append( filler.execute(tree, context)
 
-
-Simplest usage (variable/expression substitution):
+Simplest usage (variable/expression substitution only):
 
 text = filler.fill(template, context)
 
-
 If you need variable/expression substitution only,
-without control commands, you don't need this module:
+without control commands, you can do it without this module:
 
 import re
-
 def eval_template(template, context):
     return re.sub(r'\{\{(.*?)\}\}',
         lambda m: str( eval(m[1], context) ), template)
-
 
 Template example:
 
@@ -43,7 +37,7 @@ Template example:
 </body></html>
 """
 
-__version__ = "1.05"
+__version__ = "1.06"
 __all__ = ["fill", "parse", "execute", "use"]
 
 
@@ -108,6 +102,27 @@ def cmd_for(tree, context, ans):
     context.update(outer)
 
 
+def closetag(queued, cmd, text):
+    last = queued.pop()
+    if last["cmd"] in ("elif","else"):
+        last = queued.pop()
+    last["after"] = text
+    if last["cmd"] != cmd[3:]:
+        raise SyntaxError(f'Template tag {last["cmd"]} closed with {cmd}')
+    queued[-1]["children"].append(last)
+
+
+def opentag(queued, cmd, args, text):
+    parsed = dict(cmd=cmd, args=args, text=text, children=[])
+    if cmd in ("elif","else"):
+        queued[-1]["else"] = parsed
+        if queued[-1]["cmd"] == "elif":  # drop previous elif tags
+            queued.pop()
+        if queued[-1]["cmd"] != "if":
+            raise SyntaxError(f"Tag {cmd} without if in: {line}")
+    queued.append(parsed)
+
+
 def parse(template, open="{%", close="%}"):
     """Parse template to a tree."""
     first,*parts = template.split(open)
@@ -116,22 +131,9 @@ def parse(template, open="{%", close="%}"):
         line,_,text = part.partition(close)
         cmd,*args = line.split()
         if cmd.startswith("end"):
-            last = queued.pop()
-            if last["cmd"] in ("elif","else"):
-                last = queued.pop()
-            last["after"] = text
-            if last["cmd"] != cmd[3:]:
-                raise SyntaxError(f'Template tag {last["cmd"]} closed with {cmd}')
-            queued[-1]["children"].append(last)
+            closetag(queued, cmd, text)
         elif cmd in (commands):
-            parsed = dict(cmd=cmd, args=args, text=text, children=[])
-            if cmd in ("elif","else"):
-                queued[-1]["else"] = parsed
-                if queued[-1]["cmd"] == "elif":  # drop previous elif tags
-                    queued.pop()
-                if queued[-1]["cmd"] != "if":
-                    raise SyntaxError(f"Tag {cmd} without if in: {line}")
-            queued.append(parsed)
+            opentag(queued, cmd, args, text)
         else:
             raise SyntaxError(f"Unknown template tag {cmd}")
     if len(queued) > 1:
@@ -140,7 +142,7 @@ def parse(template, open="{%", close="%}"):
 
 
 def recurse(tree, context, ans):
-    """Traverse template tree and collect executed pieces"""
+    """Traverse template tree and collect executed pieces."""
     cmd = tree["cmd"]
     commands[cmd](tree, context, ans)
     ans.append( fill(tree.get("after",""), context) )
