@@ -20,11 +20,11 @@ Block/include tags may be added later.
 
 Run tests:
 
-'''python -m unittest'''
+```python -m unittest```
 
 Build tarball + wheel:
 
-'''python -m build'''
+```python -m build```
 
 ## Contacts
 
