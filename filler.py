@@ -69,22 +69,22 @@ def command(f):
 
 
 @command
-def cmd_pass(tree, context, ans):
+def cmd_pass(tree, context, result):
     """Pass (do nothing) tag command."""
-    ans.append( fill(tree['text'] , context) )
+    result.append( fill(tree['text'] , context) )
     for c in tree['children']:
-        recurse(c, context, ans)
+        recurse(c, context, result)
 
 
 @command
-def cmd_if(tree, context, ans):
+def cmd_if(tree, context, result):
     test = eval( " ".join(tree['args']) , context )
     if test:
-        cmd_pass(tree, context, ans)
+        cmd_pass(tree, context, result)
     else:
         branch = tree.get('else', None)
         if branch:
-            recurse(branch, context, ans)
+            recurse(branch, context, result)
 
 
 commands['elif'] = cmd_if
@@ -92,7 +92,7 @@ commands['else'] = cmd_pass
 
 
 @command
-def cmd_for(tree, context, ans):
+def cmd_for(tree, context, result):
     var, word_in, *args = tree['args']
     if word_in != "in":
         raise SyntaxError(f"Invalid {tree.cmd} tag in: {''.join(tree['args'])}")
@@ -102,7 +102,7 @@ def cmd_for(tree, context, ans):
     for i,value in enumerate(sequence):
         context[var] = value
         context['index'] = i
-        cmd_pass(tree, context, ans)
+        cmd_pass(tree, context, result)
     context.update(outer)
 
 
@@ -145,18 +145,18 @@ def parse(template, open="{%", close="%}"):
     return queued[0]
 
 
-def recurse(tree, context, ans):
+def recurse(tree, context, result):
     """Traverse template tree and collect executed pieces."""
     cmd = tree["cmd"]
-    commands[cmd](tree, context, ans)
-    ans.append( fill(tree.get("after",""), context) )
+    commands[cmd](tree, context, result)
+    result.append( fill(tree.get("after",""), context) )
 
 
 def execute(tree, context):
     """Execute parsed template tree."""
-    ans = []
-    recurse(tree, context, ans)
-    return "".join(ans)
+    result = []
+    recurse(tree, context, result)
+    return "".join(result)
 
 
 def use(template, context):
