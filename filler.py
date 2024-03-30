@@ -37,27 +37,31 @@ Template example:
 </body></html>
 """
 
+from typing import Callable
+
+
 __version__ = "1.07"
 __all__ = ["fill", "parse", "execute", "use"]
 
 
-def fill(template, context):
+def fill(template: str, context: dict) -> str :
     """Basic templating. Fill vars and expressions."""
     first,*parts = template.split("{{")
-    ans = [first]
+    result = [first]
     for part in parts:
         cmd,_,text = part.partition("}}")
         value = str( eval(cmd, context) )
-        ans.append(value)
-        ans.append(text)
-    return "".join(ans)
+        result.append(value)
+        result.append(text)
+    return "".join(result)
 
 
+CommandType = Callable[[dict, dict, list[str]], None]
 
-commands = {}
+commands: dict[str, CommandType] = {}
 
 
-def command(f):
+def command(f: CommandType) -> CommandType:
     """Decorator. Add tag command to registry."""
 # need python 3.9+
 #    tag = f.__name__.removeprefix("cmd_")
@@ -71,10 +75,9 @@ def command(f):
 @command
 def cmd_pass(tree, context, result):
     """Pass (do nothing) tag command."""
-    result.append( fill(tree['text'] , context) )
+    result.append( fill(tree['text'], context) )
     for c in tree['children']:
         recurse(c, context, result)
-
 
 @command
 def cmd_if(tree, context, result):
@@ -106,7 +109,7 @@ def cmd_for(tree, context, result):
     context.update(outer)
 
 
-def closetag(queued, cmd, text):
+def closetag(queued: list, cmd: str, text: str) -> None:
     last = queued.pop()
     if last["cmd"] in ("elif","else"):
         last = queued.pop()
@@ -116,21 +119,21 @@ def closetag(queued, cmd, text):
     queued[-1]["children"].append(last)
 
 
-def opentag(queued, cmd, args, text):
+def opentag(queued: list, cmd: str, args: list, text: str) -> None:
     parsed = dict(cmd=cmd, args=args, text=text, children=[])
     if cmd in ("elif","else"):
         queued[-1]["else"] = parsed
         if queued[-1]["cmd"] == "elif":  # drop previous elif tags
             queued.pop()
         if queued[-1]["cmd"] != "if":
-            raise SyntaxError(f"Tag {cmd} without if in: {line}")
+            raise SyntaxError(f"Tag {cmd} without if in: {cmd} {' '.join(args)}")
     queued.append(parsed)
 
 
-def parse(template, open="{%", close="%}"):
+def parse(template: str, open="{%", close="%}") -> dict:
     """Parse template to a tree."""
     first,*parts = template.split(open)
-    queued = [dict(cmd="pass", args=None, text=first, children=[])]
+    queued: list = [dict(cmd="pass", args=None, text=first, children=[])]
     for part in parts:
         line,_,text = part.partition(close)
         cmd,*args = line.split()
@@ -145,21 +148,21 @@ def parse(template, open="{%", close="%}"):
     return queued[0]
 
 
-def recurse(tree, context, result):
+def recurse(tree: dict, context: dict, result: list[str]):
     """Traverse template tree and collect executed pieces."""
     cmd = tree["cmd"]
     commands[cmd](tree, context, result)
     result.append( fill(tree.get("after",""), context) )
 
 
-def execute(tree, context):
+def execute(tree: dict, context: dict) -> str:
     """Execute parsed template tree."""
-    result = []
+    result: list[str] = []
     recurse(tree, context, result)
     return "".join(result)
 
 
-def use(template, context):
+def use(template: str, context: dict) -> str:
     """Parse and execute template."""
     tree = parse(template)
     return execute(tree, context)
